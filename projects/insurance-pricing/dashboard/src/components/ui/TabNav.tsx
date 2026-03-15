@@ -14,27 +14,27 @@ interface TabNavProps {
 
 export function TabNav({ tabs, activeTab, onTabChange }: TabNavProps) {
   return (
-    <nav className="border-b border-border dark:border-[#2a2a2a] flex gap-6">
+    <nav className="py-6 flex flex-wrap gap-2">
       {tabs.map((tab) => {
         const isActive = tab.id === activeTab
         return (
           <button
             key={tab.id}
             onClick={() => onTabChange(tab.id)}
-            className={`relative pb-3 font-sans text-xs uppercase tracking-widest transition-colors ${
+            className={`relative font-sans text-xs uppercase tracking-widest px-5 py-2.5 rounded-full transition-colors ${
               isActive
-                ? 'text-ink dark:text-[#F0EFEB]'
-                : 'text-muted hover:text-ink dark:hover:text-[#F0EFEB]'
+                ? 'text-paper dark:text-ink'
+                : 'text-muted hover:bg-surface/60 dark:hover:bg-[#2a2a2a]'
             }`}
           >
-            {tab.label}
             {isActive && (
               <motion.div
                 layoutId="activeTab"
-                className="absolute bottom-0 left-0 right-0 h-px bg-ink dark:bg-[#F0EFEB]"
+                className="absolute inset-0 bg-ink dark:bg-[#F0EFEB] rounded-full"
                 transition={{ type: 'spring', stiffness: 380, damping: 30 }}
               />
             )}
+            <span className="relative z-10">{tab.label}</span>
           </button>
         )
       })}

@@ -83,7 +83,7 @@ export function CalibrationChart({ data, isLoading }: CalibrationChartProps) {
           ]}
           stroke="#C4841D"
           strokeDasharray="6 3"
-          label={{ value: 'Calibracion perfecta', fontSize: 11, fill: '#C4841D' }}
+          label={{ value: 'Calibración perfecta', fontSize: 11, fill: '#C4841D' }}
         />
         {modelNames.map((model) => (
           <Scatter

@@ -9,9 +9,11 @@ interface KPICardProps {
   suffix?: string
   decimals?: number
   delay?: number
+  accentColor?: string
+  subtitle?: string
 }
 
-export function KPICard({ label, value, prefix = '', suffix = '', decimals = 0, delay = 0 }: KPICardProps) {
+export function KPICard({ label, value, prefix = '', suffix = '', decimals = 0, delay = 0, accentColor = '#C4841D', subtitle }: KPICardProps) {
   const ref = useRef<HTMLSpanElement>(null)
 
   useEffect(() => {
@@ -33,7 +35,8 @@ export function KPICard({ label, value, prefix = '', suffix = '', decimals = 0, 
       initial={{ opacity: 0, y: 6 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4, delay }}
-      className="flex flex-col gap-1"
+      className="flex flex-col gap-1 bg-surface/40 dark:bg-[#1e1e1e] rounded-lg p-5 shadow-sm"
+      style={{ borderLeft: `3px solid ${accentColor}` }}
     >
       <span
         ref={ref}
@@ -42,6 +45,9 @@ export function KPICard({ label, value, prefix = '', suffix = '', decimals = 0, 
         {prefix}0{suffix}
       </span>
       <p className="font-sans text-xs tracking-widest uppercase text-muted">{label}</p>
+      {subtitle && (
+        <p className="font-sans text-[10px] text-muted/70">{subtitle}</p>
+      )}
     </motion.div>
   )
 }

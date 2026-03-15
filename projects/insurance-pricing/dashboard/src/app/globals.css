@@ -17,6 +17,16 @@
   --color-ink: #FAFAF8;
 }
 
+/* Warm background gradient */
+body {
+  background: linear-gradient(180deg, #FAFAF8 0%, #F5F0EA 100%);
+  min-height: 100vh;
+}
+
+.dark body {
+  background: linear-gradient(180deg, #141414 0%, #1a1816 100%);
+}
+
 /* Editorial baseline: serif headings, warm paper tones */
 h1, h2, h3, h4, h5, h6 {
   font-family: var(--font-playfair), Georgia, serif;
@@ -30,4 +40,12 @@ html {
 /* Recharts tooltip overrides for editorial feel */
 .recharts-tooltip-wrapper {
   font-family: var(--font-inter), system-ui, sans-serif;
+}
+
+/* Custom select chevron removal */
+.select-styled {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  background-image: none;
 }

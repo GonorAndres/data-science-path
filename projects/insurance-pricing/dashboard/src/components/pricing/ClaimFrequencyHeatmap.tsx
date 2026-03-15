@@ -133,7 +133,7 @@ export function ClaimFrequencyHeatmap({ data, isLoading }: ClaimFrequencyHeatmap
                     borderRadius: '2px',
                     fontVariantNumeric: 'tabular-nums',
                   }}
-                  title={`Edad vehiculo: ${vAge}, Edad conductor: ${dAge}, Frecuencia: ${freq.toFixed(4)}`}
+                  title={`Edad vehículo: ${vAge}, Edad conductor: ${dAge}, Frecuencia: ${freq.toFixed(4)}`}
                 >
                   {freq.toFixed(3)}
                 </div>

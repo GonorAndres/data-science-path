@@ -12,6 +12,9 @@ const config: Config = {
       colors: {
         paper: "#FAFAF8",
         ink: "#1A1A1A",
+        surface: "#F0EFEB",
+        border: "#E5E4DF",
+        muted: "#6B6B6B",
         "glm-blue": "#1E3A5F",
         "gbm-green": "#2D6B45",
         "lgbm-teal": "#1A7A6D",

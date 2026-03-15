@@ -52,7 +52,7 @@ scripts/utils/                # Utilidades compartidas
         <div className="flex flex-col md:flex-row items-start md:items-center gap-4 max-w-3xl">
           {[
             { step: '1', label: 'train.py', desc: 'Entrena GLM + GBM, exporta ~15 JSON' },
-            { step: '2', label: 'FastAPI', desc: 'Carga JSON al inicio, sirve via GET' },
+            { step: '2', label: 'FastAPI', desc: 'Carga JSON al inicio, sirve vía GET' },
             { step: '3', label: 'Next.js', desc: 'SWR hooks fetchean, Recharts renderiza' },
           ].map((s, i) => (
             <div key={s.step} className="flex items-center gap-3">
@@ -71,9 +71,9 @@ scripts/utils/                # Utilidades compartidas
 
       {/* MLflow summary */}
       <ChartContainer
-        title="Resumen de experimentacion (MLflow)"
-        subtitle="Mejores hiperparametros encontrados por Optuna tras busqueda bayesiana."
-        insight="Los hiperparametros reflejan la naturaleza del problema: arboles poco profundos (max_depth 4-6) y learning rates bajos (0.03-0.08) funcionan mejor para datos tabulares de seguros con alta proporcion de ceros."
+        title="Resumen de experimentación (MLflow)"
+        subtitle="Mejores hiperparámetros encontrados por Optuna tras búsqueda bayesiana."
+        insight="Los hiperparámetros reflejan la naturaleza del problema: árboles poco profundos (max_depth 4-6) y learning rates bajos (0.03-0.08) funcionan mejor para datos tabulares de seguros donde el 96% de las pólizas no tienen siniestros."
       >
         {mlLoading ? (
           <LoadingSpinner />
@@ -103,7 +103,7 @@ scripts/utils/                # Utilidades compartidas
       {/* Tech stack */}
       <motion.section {...fadeIn} transition={{ ...fadeIn.transition, delay: 0.2 }}>
         <h2 className="font-serif text-2xl md:text-3xl tracking-tight mb-4">
-          Stack tecnologico
+          Stack tecnológico
         </h2>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-3xl">
           {[
@@ -127,39 +127,39 @@ scripts/utils/                # Utilidades compartidas
       {/* Implications for Mexico */}
       <motion.section {...fadeIn} transition={{ ...fadeIn.transition, delay: 0.3 }}>
         <h2 className="font-serif text-2xl md:text-3xl tracking-tight mb-4">
-          Implicaciones para Mexico
+          Implicaciones para México
         </h2>
         <div className="space-y-4 max-w-2xl font-sans text-sm leading-relaxed">
           <div className="border-l-2 border-glm-blue pl-4">
-            <p className="font-medium text-ink dark:text-[#F0EFEB] mb-1">Regulacion (CNSF)</p>
+            <p className="font-medium text-ink dark:text-[#F0EFEB] mb-1">Regulación (CNSF)</p>
             <p className="text-muted">
-              Mexico necesita un marco para ML en pricing. La nota tecnica actual no requiere
-              explicabilidad algorítmica. Con la Ley de AI esperada en 2026, CNSF deberia
+              México necesita un marco para ML en pricing. La nota técnica actual no requiere
+              explicabilidad algorítmica. Con la Ley de AI esperada en 2026, CNSF debería
               emitir lineamientos tipo EU AI Act pero adaptados al contexto mexicano.
             </p>
           </div>
           <div className="border-l-2 border-gbm-green pl-4">
             <p className="font-medium text-ink dark:text-[#F0EFEB] mb-1">Infraestructura de datos</p>
             <p className="text-muted">
-              A diferencia de Francia (datos centralizados), Mexico no tiene una base de
-              siniestros compartida. AMIS podria liderar la creacion de un repositorio
+              A diferencia de Francia (datos centralizados), México no tiene una base de
+              siniestros compartida. AMIS podría liderar la creación de un repositorio
               anonimizado tipo freMTPL2 mexicano.
             </p>
           </div>
           <div className="border-l-2 border-lgbm-teal pl-4">
-            <p className="font-medium text-ink dark:text-[#F0EFEB] mb-1">Oportunidad telematica</p>
+            <p className="font-medium text-ink dark:text-[#F0EFEB] mb-1">Oportunidad telemática</p>
             <p className="text-muted">
-              Con 96.5% de penetracion movil, Mexico tiene la infraestructura para
-              seguros basados en uso (UBI/telematics). El siguiente paso natural despues
+              Con 96.5% de penetración móvil, México tiene la infraestructura para
+              seguros basados en uso (telemática). El siguiente paso natural después
               de demostrar el valor de ML pricing con datos tradicionales.
             </p>
           </div>
           <div className="border-l-2 border-accent-amber pl-4">
             <p className="font-medium text-ink dark:text-[#F0EFEB] mb-1">Competencia y accesibilidad</p>
             <p className="text-muted">
-              Primas mas precisas significan precios mas justos. Los buenos conductores
-              pagarian menos, incentivando la compra de seguro en un mercado donde solo
-              30% esta asegurado. First mover advantage para quien adopte ML pricing.
+              Primas más precisas significan precios más justos. Los buenos conductores
+              pagarían menos, incentivando la compra de seguro en un mercado donde solo
+              30% está asegurado. First mover advantage para quien adopte ML pricing.
             </p>
           </div>
         </div>
@@ -168,11 +168,11 @@ scripts/utils/                # Utilidades compartidas
       {/* Academic references */}
       <motion.section {...fadeIn} transition={{ ...fadeIn.transition, delay: 0.4 }}>
         <h2 className="font-serif text-2xl md:text-3xl tracking-tight mb-4">
-          Referencias academicas
+          Referencias académicas
         </h2>
         <div className="space-y-3 max-w-2xl">
           {[
-            { authors: 'Noll, Salzmann & Wuthrich', year: 2020, title: 'Case Study: French Motor TPL Claims' },
+            { authors: 'Noll, Salzmann & Wüthrich', year: 2020, title: 'Case Study: French Motor TPL Claims' },
             { authors: 'Colella & Jones', year: 2023, title: 'ML and Ratemaking (CAS E-Forum)' },
             { authors: 'MDPI Risks', year: 2024, title: 'GLM vs ML in Motor Insurance' },
             { authors: 'Kuo & Lupton', year: 2023, title: 'Explainability in Insurance Pricing (Variance)' },
@@ -197,21 +197,21 @@ scripts/utils/                # Utilidades compartidas
         </h2>
         <div className="grid md:grid-cols-2 gap-6 max-w-3xl">
           <div>
-            <p className="font-sans text-xs uppercase tracking-widest text-muted mb-2">Que funciono bien</p>
+            <p className="font-sans text-xs uppercase tracking-widest text-muted mb-2">Qué funcionó bien</p>
             <ul className="space-y-1 font-sans text-sm text-muted">
-              <li>- Descomposicion frecuencia-severidad (practica actuarial estandar)</li>
-              <li>- Optuna + MLflow para tracking sistematico de experimentos</li>
-              <li>- SHAP para explicar las decisiones del GBM a audiencias no tecnicas</li>
-              <li>- Framing cross-border (Europa vs Mexico) diferencia el proyecto</li>
+              <li>- Descomposición frecuencia-severidad (práctica actuarial estándar)</li>
+              <li>- Optuna + MLflow para tracking sistemático de experimentos</li>
+              <li>- SHAP para explicar las decisiones del GBM a audiencias no técnicas</li>
+              <li>- Framing cross-border (Europa vs México) diferencia el proyecto</li>
             </ul>
           </div>
           <div>
-            <p className="font-sans text-xs uppercase tracking-widest text-muted mb-2">Que mejorar</p>
+            <p className="font-sans text-xs uppercase tracking-widest text-muted mb-2">Qué mejorar</p>
             <ul className="space-y-1 font-sans text-sm text-muted">
-              <li>- Agregar CatBoost y EBM para comparacion mas completa</li>
+              <li>- Agregar CatBoost y EBM para comparación más completa</li>
               <li>- Implementar Tweedie GLM (modela prima pura directamente)</li>
-              <li>- Bootstrapping para intervalos de confianza en metricas</li>
-              <li>- Datos mexicanos reales (AMIS/CNSF) cuando esten disponibles</li>
+              <li>- Bootstrapping para intervalos de confianza en métricas</li>
+              <li>- Datos mexicanos reales (AMIS/CNSF) cuando estén disponibles</li>
             </ul>
           </div>
         </div>

@@ -4,6 +4,7 @@ import { usePricingFilter } from '@/context/PricingFilterContext'
 import { FilterBar } from '@/components/ui/FilterBar'
 import { ChartContainer } from '@/components/ui/ChartContainer'
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
+import { Tooltip } from '@/components/ui/Tooltip'
 import { LiftChart } from '@/components/pricing/LiftChart'
 import { CalibrationChart } from '@/components/pricing/CalibrationChart'
 import { ShapSummary } from '@/components/pricing/ShapSummary'
@@ -22,12 +23,45 @@ import {
   useFairnessAudit,
 } from '@/hooks/usePricingAPI'
 import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RTooltip,
   ResponsiveContainer, Legend, ReferenceLine,
 } from 'recharts'
 
 const MODEL_OPTIONS = ['xgboost', 'lightgbm']
 const SHAP_FEATURES = ['BonusMalus', 'DrivAge', 'VehAge', 'LogDensity', 'VehPower', 'Area']
+const SHAP_FEATURE_LABELS = [
+  'Historial de siniestros (BonusMalus)',
+  'Edad del conductor (DrivAge)',
+  'Antigüedad del vehículo (VehAge)',
+  'Densidad poblacional (LogDensity)',
+  'Potencia del motor (VehPower)',
+  'Zona urbana/rural (Area)',
+]
+
+const FEATURE_DISPLAY: Record<string, string> = {
+  BonusMalus: 'Historial de siniestros',
+  DrivAge: 'Edad del conductor',
+  VehAge: 'Antigüedad del vehículo',
+  LogDensity: 'Densidad poblacional',
+  VehPower: 'Potencia del motor',
+  Area: 'Zona urbana/rural',
+}
+
+/** Mini progress bar for metric visualization */
+function MetricBar({ value, max, inverted = false }: { value: number; max: number; inverted?: boolean }) {
+  const pct = Math.min(Math.max((value / max) * 100, 0), 100)
+  const color = inverted
+    ? `hsl(${Math.min(pct * 1.2, 120)}, 60%, 40%)`
+    : `hsl(${Math.max(120 - pct * 1.2, 0)}, 60%, 40%)`
+  return (
+    <div className="h-1.5 w-full bg-surface dark:bg-[#2a2a2a] rounded-full mt-1 overflow-hidden">
+      <div
+        className="h-full rounded-full transition-all duration-700"
+        style={{ width: `${pct}%`, backgroundColor: color }}
+      />
+    </div>
+  )
+}
 
 export function ModelComparisonPanel() {
   const { selectedModel, setSelectedModel, selectedFeature, setSelectedFeature } = usePricingFilter()
@@ -41,43 +75,58 @@ export function ModelComparisonPanel() {
   const { data: dlData, isLoading: dlLoading } = useDoubleLift()
   const { data: fairData, isLoading: fairLoading } = useFairnessAudit()
 
-  const freqModels = comparison?.models ?? []
+  const freqModels = comparison?.frequency ?? comparison?.models ?? []
 
   return (
     <div className="py-6">
       {/* Model KPI cards */}
       <section className="py-8 border-b border-border dark:border-[#2a2a2a]">
         <h2 className="font-serif text-2xl md:text-3xl tracking-tight mb-6">
-          Metricas de frecuencia
+          Métricas de frecuencia
         </h2>
         {compLoading ? (
           <LoadingSpinner />
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {freqModels.map((m: any) => (
-              <div
-                key={m.name}
-                className="p-4 rounded border border-border dark:border-[#2a2a2a] bg-surface/30 dark:bg-[#1a1a1a]"
-              >
-                <p className="font-sans text-xs uppercase tracking-widest text-muted mb-3">
-                  {m.name}
-                </p>
-                <div className="space-y-2">
-                  <div className="flex justify-between">
-                    <span className="text-sm text-muted">Gini</span>
-                    <span className="font-serif text-lg tabular-nums">{m.metrics?.gini?.toFixed(4)}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-sm text-muted">D-squared</span>
-                    <span className="font-serif text-lg tabular-nums">{m.metrics?.deviance_score_d2?.toFixed(4)}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-sm text-muted">Deviance Poisson</span>
-                    <span className="font-serif text-lg tabular-nums">{m.metrics?.mean_poisson_deviance?.toFixed(4)}</span>
+            {freqModels.map((m: any, i: number) => {
+              const gini = m.gini ?? m.metrics?.gini
+              const d2 = m.d_squared ?? m.metrics?.deviance_score_d2
+              const dev = m.poisson_deviance ?? m.metrics?.mean_poisson_deviance
+              const topColors = ['border-t-glm-blue', 'border-t-gbm-green', 'border-t-lgbm-teal']
+              return (
+                <div
+                  key={m.model ?? m.name}
+                  className={`p-4 rounded-lg border border-border dark:border-[#2a2a2a] bg-white dark:bg-[#1a1a1a] shadow-sm border-t-[3px] ${topColors[i % topColors.length]}`}
+                >
+                  <p className="font-sans text-xs uppercase tracking-widest text-muted mb-3">
+                    {m.model ?? m.name}
+                  </p>
+                  <div className="space-y-3">
+                    <div>
+                      <div className="flex justify-between">
+                        <Tooltip term="Gini">Capacidad de ranking: 0 = no distingue riesgo, 1 = perfecto.</Tooltip>
+                        <span className="font-serif text-lg tabular-nums">{gini?.toFixed(4)}</span>
+                      </div>
+                      {gini != null && <MetricBar value={gini} max={1} />}
+                    </div>
+                    <div>
+                      <div className="flex justify-between">
+                        <Tooltip term="D-squared">Porcentaje de varianza del riesgo que el modelo explica.</Tooltip>
+                        <span className="font-serif text-lg tabular-nums">{d2?.toFixed(4)}</span>
+                      </div>
+                      {d2 != null && <MetricBar value={d2} max={1} />}
+                    </div>
+                    <div>
+                      <div className="flex justify-between">
+                        <Tooltip term="Error Poisson">Error de predicción del modelo. Menor es mejor.</Tooltip>
+                        <span className="font-serif text-lg tabular-nums">{dev?.toFixed(4)}</span>
+                      </div>
+                      {dev != null && <MetricBar value={dev} max={1} inverted />}
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
         )}
       </section>
@@ -85,17 +134,17 @@ export function ModelComparisonPanel() {
       {/* Lift chart */}
       <ChartContainer
         title="Curva de lift"
-        subtitle="Los asegurados se ordenan por prediccion del modelo en deciles. Un buen modelo separa claramente alto vs bajo riesgo."
-        insight="Los modelos GBM logran mayor separacion en los extremos (deciles 1 y 10), demostrando mejor capacidad discriminatoria que el GLM. La diferencia es mas notoria en el decil de mayor riesgo."
+        subtitle="Los asegurados se ordenan por predicción del modelo en 10 grupos. Un buen modelo separa claramente alto vs bajo riesgo."
+        insight="Los modelos GBM logran mayor separación en los extremos (grupos 1 y 10), demostrando mejor capacidad para separar alto vs bajo riesgo que el GLM. La diferencia es más notoria en el grupo de mayor riesgo."
       >
         <LiftChart data={liftData as any} isLoading={liftLoading} />
       </ChartContainer>
 
       {/* Calibration */}
       <ChartContainer
-        title="Calibracion"
-        subtitle="Prediccion promedio vs siniestralidad real por decil. Un modelo bien calibrado sigue la diagonal."
-        insight="El GLM tiende a estar mejor calibrado en los deciles medios (su diseno lo fuerza). Los GBMs pueden sobre o sub-estimar en los extremos, pero su ranking es superior."
+        title="Calibración"
+        subtitle="Predicción promedio vs siniestralidad real por grupo. Un modelo bien calibrado: las predicciones coinciden con la realidad."
+        insight="El GLM tiende a estar mejor calibrado en los grupos medios (su diseño lo fuerza). Los GBMs pueden sobre o sub-estimar en los extremos, pero su ranking de riesgo es superior."
       >
         <CalibrationChart data={calibData as any} isLoading={calibLoading} />
       </ChartContainer>
@@ -103,8 +152,8 @@ export function ModelComparisonPanel() {
       {/* GLM Coefficients */}
       <ChartContainer
         title="Coeficientes GLM"
-        subtitle="Coeficientes del Poisson GLM con relatividades (exp(coef)). Una relatividad >1 indica mayor frecuencia."
-        insight="BonusMalus es el predictor mas fuerte: un coeficiente alto en bins superiores refleja el historial de siniestros. Los conductores jovenes y zonas urbanas tambien tienen relatividades altas."
+        subtitle={<>Coeficientes del modelo tradicional con <Tooltip term="relatividades">Multiplicadores del riesgo base. Una relatividad de 1.25 significa 25% más riesgo.</Tooltip>. Una relatividad mayor a 1 indica mayor frecuencia de siniestros.</>}
+        insight="El historial de siniestros (BonusMalus) es el predictor más fuerte: valores altos reflejan un mal historial. Los conductores jóvenes y zonas urbanas también tienen relatividades altas."
       >
         <CoefficientTable
           data={coeffData as any}
@@ -117,23 +166,24 @@ export function ModelComparisonPanel() {
       <section className="py-6">
         <div className="flex gap-4 mb-4">
           <FilterBar
-            label="Modelo SHAP"
+            label="Modelo"
             options={MODEL_OPTIONS}
             value={selectedModel}
             onChange={setSelectedModel}
           />
           <FilterBar
-            label="Variable dependencia"
+            label="Variable"
             options={SHAP_FEATURES}
+            labels={SHAP_FEATURE_LABELS}
             value={selectedFeature}
             onChange={setSelectedFeature}
           />
         </div>
 
         <ChartContainer
-          title="SHAP -- Importancia de variables"
-          subtitle={`Mean |SHAP value| para ${selectedModel === 'xgboost' ? 'XGBoost' : 'LightGBM'}. Mide cuanto contribuye cada variable a la prediccion.`}
-          insight="BonusMalus domina la importancia SHAP, seguido de edad del conductor y vehiculo. Esto valida la practica actuarial: el historial de siniestros es el mejor predictor de riesgo futuro."
+          title="Importancia de variables"
+          subtitle={<>Cuánto influye cada variable en la predicción de {selectedModel === 'xgboost' ? 'XGBoost' : 'LightGBM'}, medido con <Tooltip term="SHAP">Herramienta que descompone cada predicción en la contribución de cada variable.</Tooltip>.</>}
+          insight="El historial de siniestros (BonusMalus) domina, seguido de edad del conductor y vehículo. Esto valida la práctica actuarial: el historial de siniestros es el mejor predictor de riesgo futuro."
         >
           <ShapSummary
             data={shapData as any}
@@ -143,8 +193,8 @@ export function ModelComparisonPanel() {
         </ChartContainer>
 
         <ChartContainer
-          title={`SHAP Dependencia -- ${selectedFeature}`}
-          subtitle={`Efecto marginal de ${selectedFeature} sobre la prediccion de frecuencia.`}
+          title={`Efecto de: ${FEATURE_DISPLAY[selectedFeature] ?? selectedFeature}`}
+          subtitle={`Cómo cambia la predicción de frecuencia a medida que cambia ${FEATURE_DISPLAY[selectedFeature] ?? selectedFeature}.`}
           insight={getShapInsight(selectedFeature)}
         >
           <ShapDependence data={shapDep as any} isLoading={shapDepLoading} />
@@ -154,17 +204,17 @@ export function ModelComparisonPanel() {
       {/* Pure premium comparison */}
       <ChartContainer
         title="Prima pura por segmento"
-        subtitle="Prima pura = E[frecuencia] x E[severidad]. Comparacion GLM vs XGBoost por zona de densidad."
-        insight="Las mayores diferencias entre GLM y GBM aparecen en las zonas extremas (rural y urbano denso). El GBM captura mejor la no-linealidad de la densidad poblacional."
+        subtitle="Prima pura = frecuencia esperada x costo esperado. Comparación GLM vs XGBoost por zona de densidad."
+        insight="Las mayores diferencias entre GLM y GBM aparecen en las zonas extremas (rural y urbano denso). El GBM captura mejor los patrones curvos de la densidad poblacional."
       >
         <PurePremiumComparison data={ppData as any} isLoading={ppLoading} />
       </ChartContainer>
 
-      {/* Double lift -- where GLM fails */}
+      {/* Double lift: where GLM fails */}
       <ChartContainer
-        title="Donde falla el GLM?"
-        subtitle="Double-lift: ratio de prediccion GBM/GLM por decil del GLM. Valores lejos de 1.0 indican segmentos donde el GLM no captura el patron."
-        insight="El GBM detecta subsidio cruzado: en los deciles mas bajos del GLM, el GBM predice mas alto (riesgo subestimado), y viceversa en deciles altos. Este analisis es clave para mejorar la tarifa."
+        title="¿Dónde falla el GLM?"
+        subtitle="¿Qué segmentos está tarificando mal el modelo tradicional? Comparamos las predicciones del GLM contra el GBM para encontrar dónde cobra de más o de menos."
+        insight="El GBM detecta subsidio cruzado: en los grupos donde el GLM predice bajo riesgo, el GBM predice más alto (riesgo subestimado), y viceversa. Este análisis es clave para mejorar la tarifa."
       >
         {dlLoading ? (
           <LoadingSpinner />
@@ -172,9 +222,9 @@ export function ModelComparisonPanel() {
           <ResponsiveContainer width="100%" height={300}>
             <BarChart data={dlData.bins}>
               <CartesianGrid strokeDasharray="3 3" stroke="#E5E4DF" />
-              <XAxis dataKey="bin" tick={{ fontSize: 12 }} label={{ value: 'Decil GLM', position: 'insideBottom', offset: -5, fontSize: 12 }} />
+              <XAxis dataKey="bin" tick={{ fontSize: 12 }} label={{ value: 'Grupo GLM', position: 'insideBottom', offset: -5, fontSize: 12 }} />
               <YAxis tick={{ fontSize: 12 }} domain={['auto', 'auto']} />
-              <Tooltip />
+              <RTooltip />
               <ReferenceLine y={1} stroke="#6B6B6B" strokeDasharray="3 3" />
               <Bar dataKey={dlData.bins[0]?.gbm_to_glm_ratio != null ? 'gbm_to_glm_ratio' : 'mean_ratio'} fill="#2D6B45" name="Ratio GBM/GLM" />
             </BarChart>
@@ -184,9 +234,9 @@ export function ModelComparisonPanel() {
 
       {/* Fairness audit */}
       <ChartContainer
-        title="Auditoria de fairness -- proxy discrimination"
-        subtitle="Comparacion de predicciones por zona de densidad (Area A-F). Areas urbanas densas podrian actuar como proxy de nivel socioeconomico."
-        insight="Si el modelo predice sistematicamente mas alto en zonas de alta densidad (urbanas), podria discriminar indirectamente por nivel socioeconomico. En Mexico, esto es especialmente relevante dada la desigualdad entre CDMX y zonas rurales."
+        title="Auditoría de equidad: discriminación indirecta"
+        subtitle="Comparación de predicciones por zona de densidad (Area A-F). Las zonas urbanas densas podrían actuar como proxy de nivel socioeconómico."
+        insight="Si el modelo predice sistemáticamente más alto en zonas de alta densidad (urbanas), podría discriminar indirectamente por nivel socioeconómico. En México, esto es especialmente relevante dada la desigualdad entre CDMX y zonas rurales."
       >
         {fairLoading ? (
           <LoadingSpinner />
@@ -201,7 +251,7 @@ export function ModelComparisonPanel() {
               <CartesianGrid strokeDasharray="3 3" stroke="#E5E4DF" />
               <XAxis dataKey="group" tick={{ fontSize: 12 }} />
               <YAxis tick={{ fontSize: 12 }} />
-              <Tooltip />
+              <RTooltip />
               <Legend />
               <Bar dataKey="observed" fill="#6B6B6B" name="Ratio real" />
               <Bar dataKey="glm" fill="#1E3A5F" name="GLM ratio" />
@@ -216,12 +266,12 @@ export function ModelComparisonPanel() {
 
 function getShapInsight(feature: string): string {
   const insights: Record<string, string> = {
-    BonusMalus: 'Efecto monotono creciente: a mayor bonus-malus, mayor frecuencia predicha. El efecto se acelera despues de 100 (historial malo). La relacion no-lineal explica parte de la ventaja del GBM.',
-    DrivAge: 'Efecto en U: jovenes (<25) y mayores (>70) tienen SHAP positivo (mayor riesgo). El minimo esta alrededor de 45-55 anos. El GLM con bins lineales no captura bien esta curva.',
-    VehAge: 'Vehiculos muy nuevos (0-1) y muy viejos (>15) tienen mayor riesgo. Los nuevos por valor de reposicion, los viejos por mantenimiento deficiente.',
-    LogDensity: 'A mayor densidad, mayor frecuencia. Pero la relacion se aplana en densidades muy altas -- efecto que el GLM lineal no captura.',
-    VehPower: 'Vehiculos de alta potencia (>10) tienen SHAP positivo. El efecto es moderado comparado con BonusMalus.',
-    Area: 'Las areas urbanas (D-F) tienen SHAP positivo consistente. Esto es el proxy de discriminacion a auditar.',
+    BonusMalus: 'A peor historial, más riesgo predicho (relación directa). El efecto se acelera después de 100 (historial malo). Este patrón curvo explica parte de la ventaja del GBM sobre el GLM.',
+    DrivAge: 'Jóvenes y mayores tienen más siniestros (forma de U). El punto más seguro está alrededor de 45-55 años. El GLM con categorías fijas no captura bien esta curva.',
+    VehAge: 'Vehículos muy nuevos (0-1) y muy viejos (>15) tienen mayor riesgo. Los nuevos por su alto valor de reposición, los viejos por mantenimiento deficiente.',
+    LogDensity: 'A mayor densidad, mayor frecuencia. Pero la relación se aplana en densidades muy altas, un patrón curvo que el modelo tradicional no captura bien.',
+    VehPower: 'Vehículos de alta potencia (>10) muestran mayor riesgo predicho. El efecto es moderado comparado con el historial de siniestros.',
+    Area: 'Las áreas urbanas (D-F) consistentemente muestran mayor riesgo predicho. Este es el patrón de discriminación indirecta a auditar.',
   }
-  return insights[feature] ?? 'Selecciona una variable para ver la interpretacion del efecto SHAP.'
+  return insights[feature] ?? 'Selecciona una variable para ver cómo afecta la predicción del modelo.'
 }

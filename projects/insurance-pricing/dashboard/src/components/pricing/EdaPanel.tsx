@@ -4,6 +4,7 @@ import { usePricingFilter } from '@/context/PricingFilterContext'
 import { FilterBar } from '@/components/ui/FilterBar'
 import { ChartContainer } from '@/components/ui/ChartContainer'
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
+import { Tooltip } from '@/components/ui/Tooltip'
 import { FeatureDistribution } from '@/components/pricing/FeatureDistribution'
 import { ClaimFrequencyHeatmap } from '@/components/pricing/ClaimFrequencyHeatmap'
 import {
@@ -12,11 +13,34 @@ import {
   useClaimFrequency,
 } from '@/hooks/usePricingAPI'
 import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RTooltip,
   ResponsiveContainer,
 } from 'recharts'
 
 const FEATURES = ['VehPower', 'VehAge', 'DrivAge', 'BonusMalus', 'Density', 'VehBrand', 'VehGas', 'Area', 'Region']
+const FEATURE_LABELS = [
+  'Potencia del motor (VehPower)',
+  'Antigüedad del vehículo (VehAge)',
+  'Edad del conductor (DrivAge)',
+  'Historial de siniestros (BonusMalus)',
+  'Densidad poblacional (Density)',
+  'Marca del vehículo (VehBrand)',
+  'Tipo de combustible (VehGas)',
+  'Zona urbana/rural (Area)',
+  'Región administrativa (Region)',
+]
+
+const FEATURE_DISPLAY: Record<string, string> = {
+  VehPower: 'Potencia del motor',
+  VehAge: 'Antigüedad del vehículo',
+  DrivAge: 'Edad del conductor',
+  BonusMalus: 'Historial de siniestros',
+  Density: 'Densidad poblacional',
+  VehBrand: 'Marca del vehículo',
+  VehGas: 'Tipo de combustible',
+  Area: 'Zona urbana/rural',
+  Region: 'Región administrativa',
+}
 
 export function EdaPanel() {
   const { selectedFeature, setSelectedFeature } = usePricingFilter()
@@ -26,6 +50,7 @@ export function EdaPanel() {
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const currentDist = (allDistributions as any)?.[selectedFeature]
+  const displayName = FEATURE_DISPLAY[selectedFeature] ?? selectedFeature
 
   return (
     <div className="py-6">
@@ -34,6 +59,7 @@ export function EdaPanel() {
         <FilterBar
           label="Variable"
           options={FEATURES}
+          labels={FEATURE_LABELS}
           value={selectedFeature}
           onChange={setSelectedFeature}
         />
@@ -41,8 +67,8 @@ export function EdaPanel() {
 
       {/* Feature distribution */}
       <ChartContainer
-        title="Distribucion de variables"
-        subtitle={`Distribucion de ${selectedFeature} en 677,991 polizas del portafolio frances.`}
+        title={`Distribución: ${displayName}`}
+        subtitle={`Distribución de ${displayName} en 677,991 pólizas del portafolio francés.`}
         insight={getFeatureInsight(selectedFeature)}
       >
         {distLoading ? (
@@ -60,9 +86,9 @@ export function EdaPanel() {
 
       {/* Exposure by Area */}
       <ChartContainer
-        title="Exposicion por area"
-        subtitle="Total de exposicion (anos-poliza) y tasa de siniestro por zona de densidad poblacional."
-        insight="Las zonas urbanas (D-F) concentran mas exposicion y mayor frecuencia de siniestros. En Mexico, la concentracion en CDMX/Monterrey/Guadalajara seria aun mas pronunciada."
+        title="Tiempo asegurado por zona"
+        subtitle={<>Total de <Tooltip term="exposición">Tiempo que cada póliza estuvo activa, medido en años. Ej: 0.5 = 6 meses asegurado.</Tooltip> (años-póliza) y porcentaje de pólizas con siniestro por zona de densidad poblacional.</>}
+        insight="Las zonas urbanas (D-F) concentran más tiempo asegurado y mayor frecuencia de siniestros. En México, la concentración en CDMX/Monterrey/Guadalajara sería aún más pronunciada."
       >
         {expLoading ? (
           <LoadingSpinner />
@@ -73,8 +99,8 @@ export function EdaPanel() {
               <XAxis dataKey={exposure.by_area[0]?.Area ? 'Area' : 'area'} tick={{ fontSize: 12 }} />
               <YAxis yAxisId="left" tick={{ fontSize: 12 }} />
               <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 12 }} />
-              <Tooltip />
-              <Bar yAxisId="left" dataKey="total_exposure" fill="#1E3A5F" name="Exposicion total" />
+              <RTooltip />
+              <Bar yAxisId="left" dataKey="total_exposure" fill="#1E3A5F" name="Exposición total" />
               <Bar yAxisId="right" dataKey={exposure.by_area[0]?.claim_rate != null ? 'claim_rate' : 'claim_frequency'} fill="#C4841D" name="Tasa siniestro" />
             </BarChart>
           </ResponsiveContainer>
@@ -83,9 +109,9 @@ export function EdaPanel() {
 
       {/* Claim frequency heatmap */}
       <ChartContainer
-        title="Frecuencia de siniestros: edad del conductor x edad del vehiculo"
-        subtitle="Tasa de siniestros promedio por combinacion de edad del conductor y antiguedad del vehiculo."
-        insight="Los conductores jovenes (18-26) con vehiculos viejos tienen la frecuencia mas alta -- patron clasico en pricing actuarial. El sistema bonus-malus penaliza este perfil, pero el GLM podria no capturar la interaccion completa."
+        title="Frecuencia de siniestros: edad del conductor x antigüedad del vehículo"
+        subtitle="Porcentaje promedio de pólizas con siniestro, por combinación de edad del conductor y antigüedad del vehículo."
+        insight="Los conductores jóvenes (18-26) con vehículos viejos tienen la frecuencia más alta. El sistema bonus-malus penaliza este perfil, pero el modelo tradicional (GLM) podría no capturar la interacción completa."
       >
         {freqLoading ? (
           <LoadingSpinner />
@@ -99,15 +125,15 @@ export function EdaPanel() {
 
 function getFeatureInsight(feature: string): string {
   const insights: Record<string, string> = {
-    VehPower: 'La mayoria de vehiculos tienen potencia 5-7. En Mexico, la distribucion seria similar pero con mayor concentracion en vehiculos compactos (Nissan March, VW Vento).',
-    VehAge: 'Los vehiculos nuevos (0-2 anos) dominan el portafolio. En Mexico, la edad promedio del parque vehicular es mayor (~12 anos), lo que cambiaria esta distribucion significativamente.',
-    DrivAge: 'Distribucion normal centrada en 40-50 anos. Los conductores jovenes (<26) son pocos pero con mayor frecuencia de siniestros -- clave para el bonus-malus.',
-    BonusMalus: 'Fuertemente sesgado a la izquierda: la mayoria de asegurados tienen bonus 50-60 (los mejores). Esta es la variable mas predictiva de frecuencia. Mexico usa un sistema similar.',
-    Density: 'Extremadamente sesgada a la derecha. Unas pocas polizas en zonas muy densas (Paris). Log-transformar es esencial para modelar esta variable.',
-    VehBrand: 'Unas pocas marcas dominan (Renault, Peugeot en Francia). En Mexico serian Nissan, VW, Chevrolet, Toyota.',
-    VehGas: 'Aproximadamente 60% gasolina, 40% diesel en Francia. En Mexico seria >90% gasolina con crecimiento de electricos.',
-    Area: 'Seis zonas de densidad (A=rural a F=urbana). Clave para pricing pero potencial proxy de nivel socioeconomico.',
+    VehPower: 'La mayoría de vehículos tienen potencia 5-7. En México, la distribución sería similar pero con mayor concentración en vehículos compactos (Nissan March, VW Vento).',
+    VehAge: 'Los vehículos nuevos (0-2 años) dominan el portafolio. En México, la edad promedio del parque vehicular es mayor (~12 años), lo que cambiaría esta distribución significativamente.',
+    DrivAge: 'Concentrada en 40-50 años. Los conductores jóvenes (<26) son pocos pero tienen más siniestros; por eso el sistema bonus-malus los penaliza.',
+    BonusMalus: 'La gran mayoría de conductores tienen buen historial (50-60, la mejor calificación). Esta es la variable más predictiva de frecuencia. México usa un sistema similar.',
+    Density: 'Muy concentrada en valores bajos, con unas pocas pólizas en zonas muy densas (París). Los valores van de 1 a 27,000; se comprime la escala para que los modelos funcionen bien.',
+    VehBrand: 'Unas pocas marcas dominan (Renault, Peugeot en Francia). En México serían Nissan, VW, Chevrolet, Toyota.',
+    VehGas: 'Aproximadamente 60% gasolina, 40% diésel en Francia. En México sería >90% gasolina con crecimiento de eléctricos.',
+    Area: 'Seis zonas de densidad (A=rural a F=urbana). Clave para pricing, pero puede reflejar indirectamente el nivel socioeconómico, lo que requiere cuidado ético.',
     Region: 'Regiones administrativas francesas. Las 10 principales cubren ~80% del portafolio.',
   }
-  return insights[feature] ?? 'Selecciona una variable para ver su interpretacion.'
+  return insights[feature] ?? 'Selecciona una variable para ver su interpretación.'
 }
