@@ -147,6 +147,7 @@ def train_lgb_frequency(
             "reg_lambda": trial.suggest_float("reg_lambda", 1e-8, 10.0, log=True),
             "min_split_gain": trial.suggest_float("min_split_gain", 1e-8, 1.0, log=True),
             "verbose": -1,
+            "feature_pre_filter": False,
         }
 
         with mlflow.start_run(nested=True):

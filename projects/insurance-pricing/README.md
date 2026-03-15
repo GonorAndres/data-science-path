@@ -1,6 +1,6 @@
 # Insurance Pricing: Lessons from Europe for Mexico's Auto Insurance Market
 
-**Business question**: What can Mexico's auto insurance market -- where only 30% of vehicles are insured and most pricing relies on traditional methods -- learn from Europe's actuarial data science revolution?
+**Business question**: What can Mexico's auto insurance market, where only 30% of vehicles are insured and most pricing relies on traditional methods, learn from Europe's actuarial data science revolution?
 
 ## Why This Matters
 
@@ -16,7 +16,7 @@
 - Frequency: Poisson GLM vs XGBoost vs LightGBM
 - Severity: Gamma GLM vs XGBoost
 
-**Dataset**: freMTPL2 (French Motor Third-Party Liability) -- 677,991 policies, the gold-standard benchmark in actuarial data science.
+**Dataset**: freMTPL2 (French Motor Third-Party Liability): 677,991 policies, the gold-standard benchmark in actuarial data science.
 
 **Key innovations**:
 1. Cross-border framing: European techniques analyzed for Mexican market applicability
@@ -62,17 +62,17 @@ pytest tests/
 
 ## Dashboard Tabs
 
-1. **Contexto** -- Mexico's market problem, GLM-vs-ML debate, regulatory comparison, methodology
-2. **EDA Explorer** -- Feature distributions, claim frequency heatmap, exposure analysis
-3. **Comparacion de Modelos** -- KPIs, lift, calibration, GLM coefficients, SHAP, fairness audit
-4. **Proceso Tecnico** -- Architecture, MLflow experiments, implications for Mexico, retrospective
+1. **Contexto**: Mexico's market problem, GLM-vs-ML debate, regulatory comparison, methodology
+2. **EDA Explorer**: Feature distributions, claim frequency heatmap, exposure analysis
+3. **Comparacion de Modelos**: KPIs, lift, calibration, GLM coefficients, SHAP, fairness audit
+4. **Proceso Tecnico**: Architecture, MLflow experiments, implications for Mexico, retrospective
 
 ## Academic References
 
-- Noll, Salzmann & Wuthrich (2020) -- GBM outperforms GLM on freMTPL2
-- Colella & Jones, CAS E-Forum (2023) -- No universal optimal model
-- MDPI Risks (2024) -- Hybrid GLM+ANN beats all individual models
-- Kuo & Lupton, Variance (2023) -- SHAP needed for regulatory review
+- Noll, Salzmann & Wuthrich (2020): GBM outperforms GLM on freMTPL2
+- Colella & Jones, CAS E-Forum (2023): No universal optimal model
+- MDPI Risks (2024): Hybrid GLM+ANN beats all individual models
+- Kuo & Lupton, Variance (2023): SHAP needed for regulatory review
 
 ## Retrospective
 

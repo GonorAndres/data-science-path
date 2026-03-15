@@ -48,11 +48,11 @@ Rscript <path-to-script>.R
 
 ## Focus areas
 
-1. **ML & Predictive Modeling** -- classification, regression, ensembles, model evaluation
-2. **Customer Analytics** -- segmentation, churn, CLV, cohort analysis
-3. **Actuarial / Risk Modeling** -- survival analysis, GLMs, reserving, pricing
+1. **ML & Predictive Modeling**: classification, regression, ensembles, model evaluation
+2. **Customer Analytics**: segmentation, churn, CLV, cohort analysis
+3. **Actuarial / Risk Modeling**: survival analysis, GLMs, reserving, pricing
 
-## Secrets & Environment Variables -- MANDATORY
+## Secrets & Environment Variables (MANDATORY)
 
 **NEVER commit secrets, API keys, passwords, tokens, or credentials to this repository.**
 
@@ -60,21 +60,25 @@ Before every commit, verify that no private variables are being staged. If a har
 1. **Remove** the hardcoded value immediately
 2. **Replace** it with an environment variable reference (e.g., `os.environ["DB_PASSWORD"]`)
 3. **Add** the variable name and a placeholder to `.env.example` so collaborators know what to set
-4. **Confirm** `.env` is listed in `.gitignore` (it already is -- `.env`, `*.env`, `.env.*`, `credentials.json`, `*.pem`, `*.key` are all gitignored)
+4. **Confirm** `.env` is listed in `.gitignore` (it already is: `.env`, `*.env`, `.env.*`, `credentials.json`, `*.pem`, `*.key` are all gitignored)
 
 Common patterns:
 ```python
-# WRONG -- never do this
+# WRONG: never do this
 API_KEY = "sk-abc123..."
 conn = psycopg2.connect(password="my_password")
 
-# RIGHT -- always do this
+# RIGHT: always do this
 import os
 API_KEY = os.environ["API_KEY"]
 conn = psycopg2.connect(password=os.environ["DB_PASSWORD"])
 ```
 
 If you need a new secret variable, add it to `.env.example` with an empty or placeholder value before using it in code.
+
+## Writing standards
+
+- **No double-dash em-dashes**: Never use `--` as punctuation in any user-facing text (READMEs, dashboard strings, notebook markdown, blog posts). Use commas, semicolons, colons, or restructure the sentence instead. This applies to `.md`, `.tsx`, `.ts`, and `.ipynb` files.
 
 ## Conventions
 
@@ -90,7 +94,7 @@ If you need a new secret variable, add it to `.env.example` with an empty or pla
 
 When creating outputs for non-technical audiences:
 - Lead with the business question and answer, not the methodology
-- Use plotly or seaborn for clean, labeled visuals -- no raw matplotlib defaults
+- Use plotly or seaborn for clean, labeled visuals; no raw matplotlib defaults
 - Include a "So what?" interpretation after every chart or table
 - Keep technical jargon in footnotes or appendices, not the main narrative
 
