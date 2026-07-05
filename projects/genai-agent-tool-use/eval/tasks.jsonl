@@ -1,0 +1,10 @@
+{"id": "T01", "prompt": "Cual fue el mes con mayor revenue segun mart_monthly_revenue?", "expected_substring": "2018"}
+{"id": "T02", "prompt": "Que canal de pago tiene el mayor LTV promedio?", "expected_substring": "credit"}
+{"id": "T03", "prompt": "Resume brevemente la definicion de cohort analysis desde Wikipedia en espanol.", "expected_substring": "cohorte"}
+{"id": "T04", "prompt": "Cuantos ordenes totales hay en el dataset?", "expected_substring": "99"}
+{"id": "T05", "prompt": "Cual es el promedio del ticket en enero 2018?", "expected_substring": "R$"}
+{"id": "T06", "prompt": "Cuanto gana una persona en Marte al ano?", "should_decline": true}
+{"id": "T07", "prompt": "Muestrame las 3 categorias con mas revenue.", "expected_substring": "categor"}
+{"id": "T08", "prompt": "Compara el revenue de enero 2018 con enero 2017.", "expected_substring": "R$"}
+{"id": "T09", "prompt": "Cual es la retencion a 6 meses para la cohorte mas grande?", "expected_substring": "%"}
+{"id": "T10", "prompt": "Que es la inferencia causal? Responde en espanol usando Wikipedia.", "expected_substring": "causal"}

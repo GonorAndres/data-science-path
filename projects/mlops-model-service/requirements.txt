@@ -1,0 +1,9 @@
+fastapi>=0.110
+uvicorn[standard]>=0.29
+pydantic>=2.6
+prometheus-client>=0.20
+torch>=2.2
+transformers>=4.40
+httpx>=0.27
+pytest>=8.1
+ruff>=0.4

@@ -163,6 +163,107 @@ Common approaches:
 - **Incurred vs. Paid consistency**: Run the methods on both paid and incurred triangles; large discrepancies signal case reserve adequacy issues.
 - **Calendar-year effects**: Diagonal patterns in the triangle often indicate inflation changes, operational shifts, or one-time events.
 
+## Mack chain ladder and stochastic reserving
+
+The deterministic Chain Ladder produces a point estimate of the ultimate but says nothing about uncertainty. A reserve estimate of 100 million MXN with a standard error of 5 million is a different financial reality than the same estimate with a standard error of 30 million. Mack (1993) showed that under three explicit assumptions, the standard error of the Chain Ladder reserve has a closed form, with no parametric distributional assumption.
+
+### Mack's three assumptions
+
+For cumulative losses $C_{i,d}$:
+
+1. **Independence of accident years.** $C_{i,\cdot}$ and $C_{j,\cdot}$ are independent for $i \neq j$. Catastrophes that hit multiple accident years (a long-running asbestos exposure, a medical-billing scandal that develops over a decade) violate this.
+2. **Markov property of development.** The expected next-period cumulative loss is proportional to the current cumulative loss with a development-period-specific factor:
+   $$
+   E[C_{i, d+1} \mid C_{i, 1}, \ldots, C_{i, d}] = f_d \cdot C_{i, d}
+   $$
+   This is exactly the Chain Ladder assumption, made explicit.
+3. **Variance proportional to cumulative.** $\text{Var}[C_{i, d+1} \mid C_{i, 1}, \ldots, C_{i, d}] = \sigma_d^2 \cdot C_{i, d}$. The variance of next-period development scales linearly with the current cumulative; large-loss accident years have proportionally larger development noise.
+
+Under these assumptions Mack derives an unbiased estimator $\hat{\sigma}_d^2$ of the per-period variance and a closed form for the **standard error of the ultimate** for each accident year:
+
+$$
+\text{SE}(\hat{U}_i)^2 = \hat{U}_i^2 \sum_{d = d_i}^{D-1} \frac{\hat{\sigma}_d^2 / \hat{f}_d^2}{\hat{C}_{i, d}} + \hat{U}_i^2 \sum_{d = d_i}^{D-1} \frac{\hat{\sigma}_d^2 / \hat{f}_d^2}{\sum_{j=1}^{D-d} C_{j, d}}
+$$
+
+The two terms separate **process variance** (random claim development going forward) from **estimation variance** (uncertainty in the development factors themselves). The total reserve standard error aggregates across accident years with appropriate covariance terms because the same development factors $\hat{f}_d$ are used for every accident year.
+
+In practice: report Mack's IBNR point estimate plus its standard error, plus the implied 75th, 95th, and 99th percentiles assuming a lognormal distribution. CAS Exam 7 and IFRS 17 risk-adjustment work both expect Mack-style standard errors as the baseline.
+
+### What Mack did not show
+
+Mack did not derive a full distribution for the IBNR; he provided the first two moments. Higher percentiles require an assumed distribution (lognormal is conventional but not justified by the model itself) or a bootstrap.
+
+## ODP bootstrap reserving
+
+The Over-Dispersed Poisson (ODP) bootstrap (England, Verrall 1999, 2002) produces a full predictive distribution of the IBNR by combining a GLM-based reformulation of the Chain Ladder with a residual bootstrap. It is the most widely used stochastic reserving method in P&C practice.
+
+### Why ODP
+
+The development factors estimated from a triangle have **over-dispersion**: their empirical variance exceeds what a Poisson model would predict, because the underlying claims process has more randomness than pure counting. ODP introduces a dispersion parameter $\phi$ that scales the variance:
+
+$$
+\text{Var}(X_{i, d}) = \phi \cdot \mu_{i, d}
+$$
+
+where $X_{i, d}$ is the incremental loss and $\mu_{i, d}$ its mean. A Poisson GLM with log link, accident-year and development-period factors, and a dispersion parameter is mathematically equivalent to the volume-weighted Chain Ladder for the point estimate; the ODP framing gives access to GLM machinery for residuals and inference.
+
+### The ODP bootstrap algorithm
+
+```
+1. Fit the ODP GLM to the observed triangle. Recover fitted incremental losses
+   mu_hat_{i,d} and Pearson residuals
+       r_{i,d} = (X_{i,d} - mu_hat_{i,d}) / sqrt(mu_hat_{i,d})
+2. Estimate the dispersion phi_hat from the Pearson residuals.
+3. For b = 1, ..., B (typically B = 5000 to 10000):
+   3a. Resample the residuals with replacement to form r*_{i,d}.
+   3b. Construct a pseudo-triangle:
+           X*_{i,d} = mu_hat_{i,d} + r*_{i,d} * sqrt(mu_hat_{i,d})
+   3c. Refit the Chain Ladder on X*_{i,d} to obtain new development factors
+       and ultimate projections.
+   3d. Add a process-variance step: simulate the unobserved cells from a
+       Gamma (or ODP) distribution with mean from the projection and the
+       estimated dispersion.
+   3e. Sum the simulated unobserved cells to get a single bootstrap IBNR sample.
+4. The empirical distribution of the B IBNR samples is the predictive distribution.
+   Compute mean, SE, 75th, 95th, 99th quantiles.
+```
+
+Step 3d is critical and often missed by toy implementations. Without process variance, the bootstrap captures only the uncertainty in the development factors (estimation variance) and dramatically understates total reserve risk.
+
+The `chainladder` Python library implements this as `cl.BootstrapODPSample`. The R `ChainLadder` package implements it as `BootChainLadder` with `process.distr = "gamma"` or `"od.pois"`. Both produce the full distribution; reporting the 75th and 99th percentiles is standard for IFRS 17 risk-adjustment work and reinsurance pricing.
+
+## IFRS 17 connection
+
+IFRS 17 (effective 2023, applied across most jurisdictions including Mexico via CNSF) reframes insurance liabilities into three components:
+
+- **Best Estimate Liability (BEL).** The probability-weighted expected present value of future cash flows. The Chain Ladder, BF, or Cape Cod ultimate, less paid-to-date and discounted, is the BEL for non-life claims.
+- **Risk Adjustment (RA).** The compensation the entity requires for bearing uncertainty in non-financial risks. Operationally this is a percentile of the ultimate distribution above the BEL, often the 75th or 85th percentile from a stochastic reserving model. Mack standard errors and ODP bootstrap quantiles feed directly into the RA calculation.
+- **Contractual Service Margin (CSM).** The unearned profit at recognition, released over the coverage period. Less relevant for short-tailed P&C; central for life and long-duration contracts.
+
+The reserving actuary's IFRS 17 deliverable is therefore not just a single best-estimate number but a distribution of ultimates with documented percentiles. Mack and ODP are the auditor-defensible methods for producing it; full Bayesian reserving (Wuthrich-Merz, Stan, Hamiltonian Monte Carlo on a hierarchical model) is the next-generation approach for groups with the actuarial-DS skill set to maintain it.
+
+## Individual claims ML reserving
+
+The triangle methods aggregate claims and lose information. Two claims that both report 50,000 MXN paid at month 6 may have very different ultimate trajectories: one is a soft-tissue auto claim that closes at 60,000; the other is a complex bodily injury claim that develops to 500,000 over five years. The triangle treats them identically.
+
+Wuthrich (2018) and Gabrielli-Wuthrich (2018) propose **individual claims reserving**: model the ultimate for each claim conditional on its features. Per-claim features include claim type, jurisdiction, policy limit, claimant age, days from accident to first report, body parts injured, attorney involved, prior development pattern of the same claim. The model is a per-claim regressor:
+
+$$
+E[\text{Ultimate}_i \mid \text{features}_i, \text{paid}_{i, t}, t]
+$$
+
+Architectures used in practice:
+
+- **Gradient-boosted trees** (XGBoost, LightGBM) on engineered features and lagged payment patterns. The pragmatic baseline.
+- **Sequence models** (LSTM, transformer) on the per-claim payment sequence, treating each claim as a time series. Higher capacity, more data needed.
+- **Hybrid Cox-style models** that separate the time-to-closure from the size given closure.
+
+The aggregate reserve is the sum of per-claim predicted ultimates minus paid-to-date. Validation requires holding out a recent accident year and comparing the per-claim predicted ultimate to the realized ultimate as it develops.
+
+When to use individual claims ML over triangle methods. The crossover happens when (a) per-claim feature data is reliably captured at first notice and (b) the portfolio has heterogeneous claim types whose triangle aggregation hides material variability. Workers compensation and bodily injury portfolios benefit most; pure-property portfolios with homogeneous fast-closing claims see little improvement.
+
+The two approaches complement rather than replace. Many large insurers use the Chain Ladder as the primary regulatory reserve and individual claims ML as an internal management metric to flag claims that the regulatory reserve under-projects.
+
 ## Python implementation
 
 The `chainladder` library is the standard Python package for loss reserving.
@@ -272,3 +373,7 @@ quantile(boot_result, c(0.75, 0.95, 0.99))
 - [CAS Exam 7 Study Materials](https://www.casact.org/) -- Detailed treatment of all reserving methods.
 - [England & Verrall (2002) -- Stochastic Claims Reserving in General Insurance](https://www.actuaries.org.uk/) -- Foundational paper on stochastic reserving.
 - [Mack (1993) -- Distribution-free Calculation of the Standard Error of Chain Ladder Reserve Estimates](https://www.casact.org/) -- The Mack method paper.
+- Wuthrich, "Machine learning in individual claims reserving", Scandinavian Actuarial Journal 2018.
+- Gabrielli, Wuthrich, "An Individual Claims History Simulation Machine", Risks 2018.
+- IFRS 17 Insurance Contracts, IFRS Foundation 2017 (effective 2023).
+- CNSF, "Disposiciones de caracter general aplicables a las instituciones de seguros y de fianzas" (Mexican implementation of IFRS 17, 2023 onward).

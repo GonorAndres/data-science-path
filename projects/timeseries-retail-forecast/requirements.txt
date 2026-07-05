@@ -1,0 +1,11 @@
+numpy>=1.26
+pandas>=2.2
+scikit-learn>=1.4
+statsmodels>=0.14
+prophet>=1.1.5
+lightgbm>=4.3
+mlflow>=2.11
+kaggle>=1.6
+plotly>=5.20
+pytest>=8.1
+optuna>=3.6

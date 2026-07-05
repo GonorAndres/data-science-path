@@ -1,0 +1,8 @@
+sentence-transformers>=2.7
+chromadb>=0.5
+requests>=2.31
+gradio>=4.0
+numpy>=1.26
+pandas>=2.2
+pytest>=8.1
+beautifulsoup4>=4.12

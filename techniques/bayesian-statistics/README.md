@@ -159,6 +159,189 @@ Key MCMC concepts:
 - **Convergence diagnostics**: R-hat statistic (should be close to 1.0), trace plots (should look like "fuzzy caterpillars," not trending).
 - **Effective sample size (ESS)**: Accounts for autocorrelation between samples. Higher is better.
 
+## MCMC in depth
+
+When the posterior has no closed form, the standard tool is Markov Chain Monte Carlo. Three algorithms cover most practical cases.
+
+### Metropolis-Hastings
+
+Metropolis-Hastings (MH) is the prototype MCMC algorithm. To draw samples from a target $\pi(\theta) \propto p(D \mid \theta) p(\theta)$:
+
+```
+Initialize theta_0
+For t = 1, 2, ..., N:
+    Propose theta* ~ q(theta* | theta_{t-1})
+    Compute acceptance ratio
+        alpha = min(1, pi(theta*) q(theta_{t-1} | theta*) /
+                       pi(theta_{t-1}) q(theta* | theta_{t-1}))
+    Draw u ~ Uniform(0, 1)
+    If u < alpha:
+        theta_t = theta*
+    Else:
+        theta_t = theta_{t-1}
+```
+
+When $q$ is symmetric (random walk MH) the proposal terms cancel and the rule simplifies to "accept with probability $\min(1, \pi(\theta^*)/\pi(\theta_{t-1}))$". Tuning the proposal scale is the operational challenge: too small means high acceptance but slow exploration; too large means most proposals rejected.
+
+### Gibbs sampling
+
+When the conditional posterior of each parameter given the others has a closed form, Gibbs sampling cycles through parameters and samples each from its conditional in turn:
+
+```
+For t = 1, 2, ..., N:
+    For each parameter j:
+        theta_j^{(t)} ~ p(theta_j | theta_{-j}^{(t-1)}, D)
+```
+
+Gibbs is exact (no acceptance step) when the conditionals are tractable. The classical setting is conjugate hierarchical models: each variance, each random effect, each fixed effect has a known conditional and Gibbs cycles through them. Without conjugacy, fall back to Metropolis-within-Gibbs.
+
+### NUTS (No-U-Turn Sampler)
+
+NUTS (Hoffman, Gelman 2014) is the sampler used by Stan, PyMC, and NumPyro for continuous-parameter models. It is a self-tuning variant of **Hamiltonian Monte Carlo (HMC)**: the parameter is augmented with a momentum, simulated forward in time using the gradient of the log posterior, and the trajectory provides a globally informed proposal.
+
+Why it dominates for high-dimensional continuous models:
+
+- Gradient information lets the sampler take long, well-targeted moves; random-walk MH gets stuck in funnels.
+- NUTS automatically chooses the trajectory length, removing the most fragile HMC hyperparameter.
+- Acceptance rates near 0.8 with effective sample sizes per second 10x to 1000x random-walk MH on realistic models.
+
+NUTS requires log-posterior gradients, so models must be implemented in a framework that supports automatic differentiation (Stan, PyMC v5 on PyTensor, NumPyro on JAX).
+
+### Convergence diagnostics
+
+A single chain can look fine and still be wrong. Run **at least four chains** from over-dispersed starting points and check:
+
+- **R-hat ($\hat{R}$).** Compares between-chain to within-chain variance. Should be below 1.01 for every parameter; values above 1.05 indicate the chains have not mixed.
+- **Effective sample size (ESS).** Accounts for autocorrelation. Total ESS should be at least 400 for stable inference; bulk ESS and tail ESS (Vehtari et al. 2021) report different parts of the distribution.
+- **Trace plots.** Visual: should look like a "fuzzy caterpillar" with no trend. Trends indicate non-convergence.
+- **Divergent transitions** (HMC/NUTS specific). Each divergence is a step where the sampler failed to integrate the trajectory accurately, typically in pathological geometry (the funnel of a hierarchical model). More than a handful of divergences invalidates the run; reparameterize.
+
+ArviZ provides all of these via `az.summary` and `az.plot_trace`.
+
+## Variational inference
+
+When MCMC is too slow for the application (real-time updating, very high-dimensional models, scaling to streaming data), variational inference (VI) approximates the posterior with a tractable family $q_\phi(\theta)$ and minimizes the KL divergence to the true posterior. Equivalently, VI maximizes the **evidence lower bound (ELBO)**:
+
+$$
+\text{ELBO}(\phi) = \mathbb{E}_{q_\phi}\!\left[ \log p(D, \theta) - \log q_\phi(\theta) \right]
+$$
+
+The first term is the expected joint log-density (data fit + prior); the second is the entropy of the variational approximation. The ELBO equals $\log p(D)$ minus the KL, so maximizing the ELBO is equivalent to minimizing the KL.
+
+**Mean-field approximation.** Assume $q_\phi(\theta) = \prod_j q_{\phi_j}(\theta_j)$ factorizes across parameters. Cheap, fast, and dramatically underestimates posterior covariance: parameters that are correlated in the true posterior come out independent in the approximation, and the marginal variances are biased low.
+
+**Full-rank Gaussian VI.** $q_\phi(\theta) = \mathcal{N}(\mu_\phi, \Sigma_\phi)$ with a learned full covariance. Captures correlations; quadratic in dimension.
+
+VI is faster than MCMC by 10x to 1000x but approximate; the approximation error is usually invisible in posterior means but biases posterior variances and tails. Use VI for:
+
+- Model exploration (rapid iteration on prior or likelihood specifications).
+- Scaling to large data (`pm.fit(method="advi")` in PyMC, SVI in NumPyro).
+- Initialization of MCMC for hard models.
+
+For final inference on consequential decisions prefer MCMC.
+
+## Hierarchical models and partial pooling
+
+A hierarchical model places a prior over groups whose hyperparameters are themselves estimated from data. The simplest example is many policyholder cohorts sharing a common population mean and variance:
+
+$$
+\mu \sim \mathcal{N}(0, 10), \quad \tau \sim \text{HalfCauchy}(2.5)
+$$
+
+$$
+\theta_g \sim \mathcal{N}(\mu, \tau^2) \quad \text{for each group } g
+$$
+
+$$
+y_{g, i} \sim \mathcal{N}(\theta_g, \sigma^2) \quad \text{for observations } i \text{ in group } g
+$$
+
+The posterior of $\theta_g$ shrinks toward the population mean $\mu$ by an amount that depends on (a) how much data group $g$ has and (b) how much between-group variance $\tau^2$ the data supports. This is **partial pooling**: groups with little data borrow strength from the population; groups with abundant data dominate their own posterior.
+
+The connection to **Buhlmann credibility** is direct: the credibility factor $Z = n / (n + k)$ is the partial-pooling weight in the conjugate normal-normal hierarchical model with $k = \sigma^2 / \tau^2$. Buhlmann credibility is Bayesian hierarchical modeling under the conjugate normal special case; hierarchical Bayesian models generalize it to any likelihood (Poisson claim counts, Tweedie pure premium, Bernoulli lapse) with a prior structure that maps to actuarial intuition.
+
+Nested random effects (drivers within agents within branches within regions) extend the same machinery to multi-level groupings. The same posterior shrinkage occurs at every level; it is the right framework for a portfolio of portfolios.
+
+## Code: PyMC Bayesian GLM for claim frequency
+
+A claim-frequency Poisson GLM with a Gamma prior on the rate, hierarchical across territories.
+
+```python
+import numpy as np
+import pandas as pd
+import pymc as pm
+import arviz as az
+
+# data: claims, exposure (log-offset), territory (categorical), age, gender
+df = pd.read_parquet("policy_year.parquet")
+n_terr = df["territory"].nunique()
+terr_idx = df["territory"].astype("category").cat.codes.values
+
+with pm.Model() as freq_model:
+    # Population-level intercept
+    mu = pm.Normal("mu", mu=-2.0, sigma=1.0)
+    # Territory-level standard deviation
+    tau = pm.HalfCauchy("tau", beta=1.0)
+    # Per-territory deviations (non-centered parameterization)
+    z = pm.Normal("z", mu=0, sigma=1, shape=n_terr)
+    alpha_terr = pm.Deterministic("alpha_terr", mu + tau * z)
+    # Fixed effects
+    beta_age    = pm.Normal("beta_age", mu=0, sigma=0.5)
+    beta_gender = pm.Normal("beta_gender", mu=0, sigma=0.5)
+
+    eta = (alpha_terr[terr_idx]
+           + beta_age * df["age_z"].values
+           + beta_gender * df["is_male"].values
+           + np.log(df["exposure"].values))
+    rate = pm.math.exp(eta)
+    pm.Poisson("claims", mu=rate, observed=df["claims"].values)
+
+    trace = pm.sample(2000, tune=2000, target_accept=0.95,
+                      chains=4, return_inferencedata=True)
+
+print(az.summary(trace, var_names=["mu", "tau", "beta_age", "beta_gender"]))
+az.plot_forest(trace, var_names=["alpha_terr"])
+```
+
+The non-centered parameterization (`alpha_terr = mu + tau * z`) is the standard fix for the funnel pathology in hierarchical models. The `target_accept=0.95` raises NUTS adaptation to handle the geometry.
+
+## Code: NumPyro version of the same model
+
+NumPyro is a JAX-based reimplementation of Pyro. Identical semantics to PyMC, often 5x to 50x faster on GPU.
+
+```python
+import jax
+import jax.numpy as jnp
+import numpyro
+import numpyro.distributions as dist
+from numpyro.infer import NUTS, MCMC
+
+def model(terr_idx, age_z, is_male, log_exposure, claims, n_terr):
+    mu = numpyro.sample("mu", dist.Normal(-2.0, 1.0))
+    tau = numpyro.sample("tau", dist.HalfCauchy(1.0))
+    z = numpyro.sample("z", dist.Normal(0.0, 1.0).expand([n_terr]))
+    alpha_terr = mu + tau * z
+    beta_age = numpyro.sample("beta_age", dist.Normal(0, 0.5))
+    beta_gender = numpyro.sample("beta_gender", dist.Normal(0, 0.5))
+    eta = (alpha_terr[terr_idx] + beta_age * age_z
+           + beta_gender * is_male + log_exposure)
+    numpyro.sample("claims", dist.Poisson(jnp.exp(eta)), obs=claims)
+
+kernel = NUTS(model, target_accept_prob=0.95)
+mcmc = MCMC(kernel, num_warmup=2000, num_samples=2000, num_chains=4)
+mcmc.run(jax.random.PRNGKey(0),
+         terr_idx=terr_idx, age_z=df["age_z"].values, is_male=df["is_male"].values,
+         log_exposure=jnp.log(df["exposure"].values), claims=df["claims"].values,
+         n_terr=n_terr)
+mcmc.print_summary()
+```
+
+The model code is essentially the same; the runtime difference is dramatic on JAX-supported hardware. For production Bayesian inference at scale (hundreds of thousands of policies, hierarchical at multiple levels) NumPyro on a GPU is the 2026 default.
+
+## Cross-reference
+
+A future essay `docs/theory/16_bayesian_methods.md` will tie these techniques together at theory level, including model comparison (WAIC, LOO-PSIS), posterior predictive checks as a unified diagnostic, and the connection to penalized likelihood and James-Stein estimation. The technique-level material here remains the operational reference.
+
 ## Python implementation
 
 **Key libraries:**
